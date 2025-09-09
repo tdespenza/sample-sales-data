@@ -17,7 +17,7 @@ export type ViewState =
   | { level: "weeks"; month: MonthData }
   | { level: "days"; month: MonthData; weekIdx: number };
 
-type Metric = keyof Omit<DayMetric, "day">;
+type Metric = keyof Omit<DayMetric, "day" | "dateISO">;
 
 const METRIC_META: Record<Metric, { label: string; type: "bar" | "line" }> = {
   signups: { label: "Sign-ups", type: "bar" },
@@ -53,7 +53,7 @@ export default function MetricChart({
     if (view.level === "weeks") {
       const { month } = view;
       const labels = month.weeks.map((w) => w.week);
-      const totals = month.weeks.map((w) => w.metrics.reduce((acc, d) => acc + d[metric], 0));
+      const totals = month.weeks.map((w) => w.totals[metric]);
       return {
         title: { text: `${meta.label} — ${month.month}` },
         tooltip: { trigger: "axis" },
