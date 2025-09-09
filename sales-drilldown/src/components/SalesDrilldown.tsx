@@ -48,10 +48,10 @@ export default function SalesDrilldown() {
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
         series: [
-          { name: "Sign-ups", type: "bar", data: month.weeks.map((w) => w.metrics.reduce((a, b) => a + b.signups, 0)) },
-          { name: "Cancellations", type: "bar", data: month.weeks.map((w) => w.metrics.reduce((a, b) => a + b.cancellations, 0)) },
-          { name: "Revenue", type: "line", data: month.weeks.map((w) => w.metrics.reduce((a, b) => a + b.revenue, 0)), smooth: true },
-          { name: "Upsells", type: "line", data: month.weeks.map((w) => w.metrics.reduce((a, b) => a + b.upsells, 0)), smooth: true }
+          { name: "Sign-ups", type: "bar", data: month.weeks.map((w) => w.totals.signups) },
+          { name: "Cancellations", type: "bar", data: month.weeks.map((w) => w.totals.cancellations) },
+          { name: "Revenue", type: "line", data: month.weeks.map((w) => w.totals.revenue), smooth: true },
+          { name: "Upsells", type: "line", data: month.weeks.map((w) => w.totals.upsells), smooth: true }
         ]
       } as EChartsOption;
     }
