@@ -107,28 +107,108 @@ export function generateSales(config = SALES_CONFIG): MonthData[] {
 // Eagerly generate (deterministic) dataset for importers
 export const SALES: MonthData[] = generateSales();
 
-// === Aggregation helpers for Years → Months → Weeks → Days ===
-export type YearKey = string; // e.g., "2024"
+// ---- Deep time helpers (append to src/data/sales.ts)
+export type YearKey = string; // "2025"
+export type QuarterKey = `${YearKey}-Q${1|2|3|4}`;
+export type DayISO = string; // YYYY-MM-DD
+
 export type YearBucket = { yearKey: YearKey; months: MonthData[]; totals: Totals };
+export type QuarterBucket = { quarterKey: QuarterKey; months: MonthData[]; totals: Totals };
 
 export function groupByYear(months: MonthData[]): YearBucket[] {
-  const byYear = new Map<YearKey, { months: MonthData[]; totals: Totals }>();
+  const map = new Map<YearKey, YearBucket>();
   for (const m of months) {
     const y = m.monthKey.slice(0, 4);
-    const curr = byYear.get(y) ?? { months: [], totals: { signups: 0, cancellations: 0, revenue: 0, upsells: 0 } };
-    curr.months.push(m);
-    curr.totals.signups += m.totals.signups;
-    curr.totals.cancellations += m.totals.cancellations;
-    curr.totals.revenue += m.totals.revenue;
-    curr.totals.upsells += m.totals.upsells;
-    byYear.set(y, curr);
+    const b = map.get(y) ?? { yearKey: y, months: [], totals: { signups:0,cancellations:0,revenue:0,upsells:0 } };
+    b.months.push(m);
+    b.totals.signups += m.totals.signups;
+    b.totals.cancellations += m.totals.cancellations;
+    b.totals.revenue += m.totals.revenue;
+    b.totals.upsells += m.totals.upsells;
+    map.set(y, b);
   }
-  return Array.from(byYear.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([yearKey, v]) => ({ yearKey, months: v.months.sort((a, b) => a.monthKey.localeCompare(b.monthKey)), totals: v.totals }));
+  return Array.from(map.values()).sort((a,b)=>a.yearKey.localeCompare(b.yearKey));
+}
+
+export function groupByQuarter(year: YearBucket): QuarterBucket[] {
+  const qMap = new Map<QuarterKey, QuarterBucket>();
+  for (const m of year.months) {
+    const y = year.yearKey;
+    const monthIdx = Number(m.monthKey.slice(5,7)) - 1; // 0-11
+    const q = (Math.floor(monthIdx/3)+1) as 1|2|3|4;
+    const qk = `${y}-Q${q}` as QuarterKey;
+    const b = qMap.get(qk) ?? { quarterKey: qk, months: [], totals: { signups:0,cancellations:0,revenue:0,upsells:0 } };
+    b.months.push(m);
+    b.totals.signups += m.totals.signups;
+    b.totals.cancellations += m.totals.cancellations;
+    b.totals.revenue += m.totals.revenue;
+    b.totals.upsells += m.totals.upsells;
+    qMap.set(qk, b);
+  }
+  return Array.from(qMap.values()).sort((a,b)=>a.quarterKey.localeCompare(b.quarterKey));
 }
 
 export function monthShortLabel(monthKey: string): string {
-  const [y, m] = monthKey.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short" });
+  const [y,m] = monthKey.split('-').map(Number);
+  return new Date(y, m-1, 1).toLocaleString('en-US', { month: 'short' });
 }
+
+export function dayISO(y:number,m:number,d:number){
+  return new Date(y, m-1, d).toISOString().slice(0,10);
+}
+
+// Locate a MonthData by key
+export function findMonth(monthKey: string, months: MonthData[]): MonthData | undefined {
+  return months.find(m=>m.monthKey===monthKey);
+}
+
+// Flatten selected MonthData to list of calendar days (with totals per day)
+export function daysOfMonth(month: MonthData): { dateISO: DayISO; label: string; totals: Totals }[] {
+  const out: { dateISO: DayISO; label: string; totals: Totals }[] = [];
+  for (const w of month.weeks) {
+    for (const d of w.metrics) {
+      out.push({
+        dateISO: d.dateISO,
+        label: d.day,
+        totals: { signups: d.signups, cancellations: d.cancellations, revenue: d.revenue, upsells: d.upsells }
+      });
+    }
+  }
+  // sort by dateISO to keep calendar order
+  out.sort((a,b)=>a.dateISO.localeCompare(b.dateISO));
+  return out;
+}
+
+// --- Lazy hour/minute synthesis per day (deterministic)
+function lazyRng(seed:number){ let s=seed|0; return ()=>{ s^=s<<13; s^=s>>>17; s^=s<<5; return (s>>>0)/4294967296; }; }
+function seedFromISO(iso: string, metric: string){
+  // simple hash seed from string
+  let h = 2166136261;
+  const str = iso+"/"+metric;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24); }
+  return h|0;
+}
+
+export type HourPoint = { hour: number; value: number };
+export type MinutePoint = { minute: number; value: number };
+
+// Split a day total across 24 hours with light variance; returns normalized to ~dayTotal
+export function synthesizeHours(dayISO: DayISO, metric: keyof Totals, dayTotal: number): HourPoint[] {
+  const r = lazyRng(seedFromISO(dayISO, String(metric)));
+  // diurnal pattern: peak mid‑day, dip at night
+  const weights = Array.from({length:24}, (_,h)=> 0.6 + 0.8*Math.exp(-Math.pow((h-14)/6,2)) + r()*0.15);
+  const sum = weights.reduce((a,b)=>a+b,0);
+  const scale = dayTotal / Math.max(sum, 1e-6);
+  return weights.map((w,h)=>({ hour:h, value: Math.max(0, Math.round(w*scale)) }));
+}
+
+// Split an hour total across 60 minutes with small randomness; normalized to ~hourTotal
+export function synthesizeMinutes(dayISO: DayISO, hour: number, metric: keyof Totals, hourTotal: number): MinutePoint[] {
+  const r = lazyRng(seedFromISO(`${dayISO}T${String(hour).padStart(2,'0')}:00`, String(metric)));
+  const weights = Array.from({length:60}, ()=> 0.9 + r()*0.2);
+  const sum = weights.reduce((a,b)=>a+b,0);
+  const scale = hourTotal / Math.max(sum, 1e-6);
+  return weights.map((w,i)=>({ minute:i, value: Math.max(0, Math.round(w*scale)) }));
+}
+
+
