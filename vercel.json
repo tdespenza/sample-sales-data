@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "sales-drilldown/package.json", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "sales-drilldown/$1" }
+  ]
+}
