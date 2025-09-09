@@ -107,3 +107,28 @@ export function generateSales(config = SALES_CONFIG): MonthData[] {
 // Eagerly generate (deterministic) dataset for importers
 export const SALES: MonthData[] = generateSales();
 
+// === Aggregation helpers for Years → Months → Weeks → Days ===
+export type YearKey = string; // e.g., "2024"
+export type YearBucket = { yearKey: YearKey; months: MonthData[]; totals: Totals };
+
+export function groupByYear(months: MonthData[]): YearBucket[] {
+  const byYear = new Map<YearKey, { months: MonthData[]; totals: Totals }>();
+  for (const m of months) {
+    const y = m.monthKey.slice(0, 4);
+    const curr = byYear.get(y) ?? { months: [], totals: { signups: 0, cancellations: 0, revenue: 0, upsells: 0 } };
+    curr.months.push(m);
+    curr.totals.signups += m.totals.signups;
+    curr.totals.cancellations += m.totals.cancellations;
+    curr.totals.revenue += m.totals.revenue;
+    curr.totals.upsells += m.totals.upsells;
+    byYear.set(y, curr);
+  }
+  return Array.from(byYear.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([yearKey, v]) => ({ yearKey, months: v.months.sort((a, b) => a.monthKey.localeCompare(b.monthKey)), totals: v.totals }));
+}
+
+export function monthShortLabel(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short" });
+}
