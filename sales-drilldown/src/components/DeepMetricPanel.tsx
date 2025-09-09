@@ -20,17 +20,10 @@ import {
   synthesizeMinutes,
   findMonth
 } from "@/data/sales";
+import { METRICS, MetricKey, MetricMeta } from "@/data/metrics";
 
 echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
-
-type Metric = keyof Totals; // "signups" | "cancellations" | "revenue" | "upsells"
-const META: Record<Metric, { label: string; type: "bar" | "line" }> = {
-  signups: { label: "Sign-ups", type: "bar" },
-  cancellations: { label: "Cancellations", type: "bar" },
-  revenue: { label: "Revenue", type: "line" },
-  upsells: { label: "Upsells", type: "line" }
-};
 
 type View =
   | { level: "years"; years: YearBucket[] }
@@ -41,35 +34,60 @@ type View =
   | { level: "hours"; dayISO: string; dayTotal: number }
   | { level: "minutes"; dayISO: string; hour: number; hourTotal: number };
 
-export default function DeepMetricPanel({ metric }: { metric: Metric }) {
-  const meta = META[metric];
+function dayCtx(d: Totals){
+  const dau = Math.max(0, Math.round((d.signups - d.cancellations) * 2.5 + 50));
+  const cacBase = Math.max(1, Math.round(100 + d.signups * 0.4));
+  return { dau, cacBase };
+}
+
+function aggregate(meta: MetricMeta, values: number[]): number {
+  const sum = values.reduce((a,b)=>a+b,0);
+  if (meta.aggregate === "sum") return sum;
+  return values.length ? sum/values.length : 0;
+}
+
+export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
+  const meta = METRICS.find(m=>m.key===metric)!;
   const [view, setView] = useState<View>({ level: "years", years: groupByYear(SALES) });
+  const calcDay = (t: Totals) => meta.dayFormula(t, dayCtx(t));
 
   const option = useMemo(() => {
     if (view.level === "years") {
       const labels = view.years.map(y=>y.yearKey);
-      const data = view.years.map(y=> y.totals[metric]);
+      const data = view.years.map(y=>{
+        const days = y.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
+        return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
+      });
       return { title:{text: meta.label}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
     }
     if (view.level === "quarters") {
       const labels = view.quarters.map(q=> q.quarterKey.split('-')[1]);
-      const data = view.quarters.map(q=> q.totals[metric]);
+      const data = view.quarters.map(q=>{
+        const days = q.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
+        return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
+      });
       return { title:{text: `${meta.label} — ${view.year.yearKey}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
     }
     if (view.level === "months") {
       const labels = view.quarter.months.map(m=> monthShortLabel(m.monthKey));
-      const data = view.quarter.months.map(m=> m.totals[metric]);
+      const data = view.quarter.months.map(m=>{
+        const days = m.weeks.flatMap(w=> w.metrics);
+        return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
+      });
       return { title:{text: `${meta.label} — ${view.quarter.quarterKey}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
     }
     if (view.level === "weeks") {
       const labels = view.month.weeks.map(w=> w.week);
-      const data = view.month.weeks.map(w=> w.totals[metric]);
+      const data = view.month.weeks.map(w=>{
+        const vals = w.metrics.map(d=>calcDay(d));
+        return Number(aggregate(meta, vals).toFixed(meta.decimals ?? 0));
+      });
       return { title:{text: `${meta.label} — ${view.month.month}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
     }
     if (view.level === "days") {
       const days = daysOfMonth(view.month);
       const labels = days.map(d=> d.dateISO.slice(8,10));
-      const data = days.map(d=> d.totals[metric]);
+      const data = days.map(d=> Number(calcDay(d.totals).toFixed(meta.decimals ?? 0)));
       return { title:{text: `${meta.label} — ${view.month.month}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, dataZoom:[{type:"inside"},{type:"slider"}], series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
     }
     if (view.level === "hours") {
@@ -78,12 +96,11 @@ export default function DeepMetricPanel({ metric }: { metric: Metric }) {
       const data = hours.map(h=> h.value);
       return { title:{text: `${meta.label} — ${view.dayISO}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true }] } as echarts.EChartsCoreOption;
     }
-    // minutes
     const minutes = synthesizeMinutes(view.dayISO, view.hour, metric, view.hourTotal);
     const labels = minutes.map(m=> String(m.minute));
     const data = minutes.map(m=> m.value);
     return { title:{text: `${meta.label} — ${view.dayISO} ${String(view.hour).padStart(2,'0')}:00`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true }] } as echarts.EChartsCoreOption;
-  }, [view, metric, meta.label, meta.type]);
+  }, [view, metric, meta, calcDay]);
 
   const onClick = (params: { dataIndex: number }) => {
     if (view.level === "years") {
@@ -96,12 +113,14 @@ export default function DeepMetricPanel({ metric }: { metric: Metric }) {
       const month = view.quarter.months[params.dataIndex];
       if (month) setView({ level: "weeks", month });
     } else if (view.level === "weeks") {
-      const month = view.month; // select the week to go to days view (show whole month days by default)
-      setView({ level: "days", month });
+      setView({ level: "days", month: view.month });
     } else if (view.level === "days") {
       const days = daysOfMonth(view.month);
       const day = days[params.dataIndex];
-      if (day) setView({ level: "hours", dayISO: day.dateISO, dayTotal: day.totals[metric] });
+      if (day) {
+        const val = calcDay(day.totals);
+        setView({ level: "hours", dayISO: day.dateISO, dayTotal: val });
+      }
     } else if (view.level === "hours") {
       const hours = synthesizeHours(view.dayISO, metric, view.dayTotal);
       const h = hours[params.dataIndex];
@@ -113,14 +132,22 @@ export default function DeepMetricPanel({ metric }: { metric: Metric }) {
     if (view.level === "minutes") setView({ level: "hours", dayISO: view.dayISO, dayTotal: view.hourTotal });
     else if (view.level === "hours") setView({ level: "days", month: findMonth(view.dayISO.slice(0,7), SALES)! });
     else if (view.level === "days") setView({ level: "weeks", month: view.month });
-    else if (view.level === "weeks") setView({ level: "months", quarter: groupByQuarter({ yearKey: view.month.monthKey.slice(0,4), months: SALES.filter(m=>m.monthKey.startsWith(view.month.monthKey.slice(0,7).slice(0,4))), totals: {signups:0,cancellations:0,revenue:0,upsells:0} })[Math.floor((Number(view.month.monthKey.slice(5,7))-1)/3)] });
-    else if (view.level === "months") setView({ level: "quarters", year: { yearKey: view.quarter.quarterKey.slice(0,4), months: SALES.filter(m=>m.monthKey.startsWith(view.quarter.quarterKey.slice(0,4))), totals: {signups:0,cancellations:0,revenue:0,upsells:0} }, quarters: groupByQuarter({ yearKey: view.quarter.quarterKey.slice(0,4), months: SALES.filter(m=>m.monthKey.startsWith(view.quarter.quarterKey.slice(0,4))), totals: {signups:0,cancellations:0,revenue:0,upsells:0} }) });
+    else if (view.level === "weeks") {
+      const yearKey = view.month.monthKey.slice(0,4);
+      const year: YearBucket = { yearKey, months: SALES.filter(m=>m.monthKey.startsWith(yearKey)), totals:{signups:0,cancellations:0,revenue:0,upsells:0} };
+      const quarter = groupByQuarter(year)[Math.floor((Number(view.month.monthKey.slice(5,7))-1)/3)];
+      setView({ level: "months", quarter });
+    }
+    else if (view.level === "months") {
+      const yearKey = view.quarter.quarterKey.slice(0,4);
+      const year: YearBucket = { yearKey, months: SALES.filter(m=>m.monthKey.startsWith(yearKey)), totals:{signups:0,cancellations:0,revenue:0,upsells:0} };
+      setView({ level: "quarters", year, quarters: groupByQuarter(year) });
+    }
     else if (view.level === "quarters") setView({ level: "years", years: groupByYear(SALES) });
   };
 
   const reset = () => setView({ level: "years", years: groupByYear(SALES) });
 
-  // Breadcrumb label
   const crumb = (()=>{
     switch(view.level){
       case "years": return "Years";
@@ -134,16 +161,15 @@ export default function DeepMetricPanel({ metric }: { metric: Metric }) {
   })();
 
   return (
-    <div className="rounded-lg border bg-white p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-sm text-gray-600">{crumb}</div>
-        <div className="flex items-center gap-2">
-          <button onClick={back} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">Back</button>
-          <button onClick={reset} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">Reset</button>
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="small text-muted">{crumb}</div>
+        <div className="btn-group btn-group-sm">
+          <button onClick={back} className="btn btn-outline-secondary">Back</button>
+          <button onClick={reset} className="btn btn-outline-secondary">Reset</button>
         </div>
       </div>
       <ReactECharts option={option} style={{ height: 320 }} onEvents={{ click: onClick }} />
     </div>
   );
 }
-

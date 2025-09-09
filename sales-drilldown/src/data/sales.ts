@@ -193,7 +193,7 @@ export type HourPoint = { hour: number; value: number };
 export type MinutePoint = { minute: number; value: number };
 
 // Split a day total across 24 hours with light variance; returns normalized to ~dayTotal
-export function synthesizeHours(dayISO: DayISO, metric: keyof Totals, dayTotal: number): HourPoint[] {
+export function synthesizeHours(dayISO: DayISO, metric: string, dayTotal: number): HourPoint[] {
   const r = lazyRng(seedFromISO(dayISO, String(metric)));
   // diurnal pattern: peak mid‑day, dip at night
   const weights = Array.from({length:24}, (_,h)=> 0.6 + 0.8*Math.exp(-Math.pow((h-14)/6,2)) + r()*0.15);
@@ -203,7 +203,7 @@ export function synthesizeHours(dayISO: DayISO, metric: keyof Totals, dayTotal: 
 }
 
 // Split an hour total across 60 minutes with small randomness; normalized to ~hourTotal
-export function synthesizeMinutes(dayISO: DayISO, hour: number, metric: keyof Totals, hourTotal: number): MinutePoint[] {
+export function synthesizeMinutes(dayISO: DayISO, hour: number, metric: string, hourTotal: number): MinutePoint[] {
   const r = lazyRng(seedFromISO(`${dayISO}T${String(hour).padStart(2,'0')}:00`, String(metric)));
   const weights = Array.from({length:60}, ()=> 0.9 + r()*0.2);
   const sum = weights.reduce((a,b)=>a+b,0);
