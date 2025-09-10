@@ -4,12 +4,12 @@ import React, { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import * as echarts from "echarts/core";
 import type { EChartsOption } from "echarts";
-import { LineChart, BarChart } from "echarts/charts";
+import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { SALES, MonthData } from "@/data/sales";
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -21,6 +21,21 @@ export default function SalesDrilldown() {
   >({ level: "months" });
 
   const option = useMemo(() => {
+    const makeSeries = (name: string, values: number[]) => ({
+      name,
+      type: "line" as const,
+      data: values,
+      smooth: true,
+      showSymbol: false,
+      lineStyle: {
+        color: (p: { dataIndex: number }) => {
+          const i = p.dataIndex;
+          if (i >= values.length - 1) return "#000";
+          return values[i + 1] >= values[i] ? "#000" : "#f00";
+        }
+      }
+    });
+
     if (view.level === "months") {
       const labels = SALES.map((m) => m.month);
       return {
@@ -30,10 +45,10 @@ export default function SalesDrilldown() {
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
         series: [
-          { name: "Sign-ups", type: "bar", data: SALES.map((m) => m.totals.signups) },
-          { name: "Cancellations", type: "bar", data: SALES.map((m) => m.totals.cancellations) },
-          { name: "Revenue", type: "line", data: SALES.map((m) => m.totals.revenue), smooth: true },
-          { name: "Upsells", type: "line", data: SALES.map((m) => m.totals.upsells), smooth: true }
+          makeSeries("Sign-ups", SALES.map((m) => m.totals.signups)),
+          makeSeries("Cancellations", SALES.map((m) => m.totals.cancellations)),
+          makeSeries("Revenue", SALES.map((m) => m.totals.revenue)),
+          makeSeries("Upsells", SALES.map((m) => m.totals.upsells))
         ]
       } as EChartsOption;
     }
@@ -48,10 +63,10 @@ export default function SalesDrilldown() {
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
         series: [
-          { name: "Sign-ups", type: "bar", data: month.weeks.map((w) => w.totals.signups) },
-          { name: "Cancellations", type: "bar", data: month.weeks.map((w) => w.totals.cancellations) },
-          { name: "Revenue", type: "line", data: month.weeks.map((w) => w.totals.revenue), smooth: true },
-          { name: "Upsells", type: "line", data: month.weeks.map((w) => w.totals.upsells), smooth: true }
+          makeSeries("Sign-ups", month.weeks.map((w) => w.totals.signups)),
+          makeSeries("Cancellations", month.weeks.map((w) => w.totals.cancellations)),
+          makeSeries("Revenue", month.weeks.map((w) => w.totals.revenue)),
+          makeSeries("Upsells", month.weeks.map((w) => w.totals.upsells))
         ]
       } as EChartsOption;
     }
@@ -66,10 +81,10 @@ export default function SalesDrilldown() {
       xAxis: { type: "category", data: labels },
       yAxis: { type: "value" },
       series: [
-        { name: "Sign-ups", type: "bar", data: week.metrics.map((d) => d.signups) },
-        { name: "Cancellations", type: "bar", data: week.metrics.map((d) => d.cancellations) },
-        { name: "Revenue", type: "line", data: week.metrics.map((d) => d.revenue), smooth: true },
-        { name: "Upsells", type: "line", data: week.metrics.map((d) => d.upsells), smooth: true }
+        makeSeries("Sign-ups", week.metrics.map((d) => d.signups)),
+        makeSeries("Cancellations", week.metrics.map((d) => d.cancellations)),
+        makeSeries("Revenue", week.metrics.map((d) => d.revenue)),
+        makeSeries("Upsells", week.metrics.map((d) => d.upsells))
       ]
     } as EChartsOption;
   }, [view]);
