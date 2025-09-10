@@ -25,12 +25,9 @@ export default function SalesDrilldown() {
     const makeSeries = (name: string, values: number[]) => ({
       name,
       type: "line" as const,
-      data: values,
+      data: trendColor(values),
       smooth: true,
-      showSymbol: false,
-      lineStyle: {
-        color: trendColor(values)
-      }
+      showSymbol: false
     });
 
     if (view.level === "months") {
