@@ -3,21 +3,21 @@
 import dynamic from "next/dynamic";
 import * as echarts from "echarts/core";
 import type { EChartsOption } from "echarts";
-import { LineChart, BarChart } from "echarts/charts";
+import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import React, { useMemo, useState } from "react";
 import { SALES, MonthData, YearBucket, groupByYear, monthShortLabel, Totals } from "@/data/sales";
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 type Metric = keyof Totals;
-const META: Record<Metric, { label: string; type: "bar" | "line" }> = {
-  signups: { label: "Sign-ups", type: "bar" },
-  cancellations: { label: "Cancellations", type: "bar" },
-  revenue: { label: "Revenue", type: "line" },
-  upsells: { label: "Upsells", type: "line" }
+const META: Record<Metric, { label: string }> = {
+  signups: { label: "Sign-ups" },
+  cancellations: { label: "Cancellations" },
+  revenue: { label: "Revenue" },
+  upsells: { label: "Upsells" }
 };
 
 type View =
@@ -34,49 +34,113 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
   const option = useMemo(() => {
     if (view.level === "years") {
       const labels = view.years.map((y) => y.yearKey);
-      const data = view.years.map((y) => y.totals[metric]);
+      const values = view.years.map((y) => y.totals[metric]);
       return {
         title: { text: meta.label },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: meta.label, type: meta.type, data, smooth: true, universalTransition: true }]
+        series: [
+          {
+            name: meta.label,
+            type: "line",
+            data: values,
+            smooth: true,
+            universalTransition: true,
+            showSymbol: false,
+            lineStyle: {
+              color: (p: { dataIndex: number }) => {
+                const i = p.dataIndex;
+                if (i >= values.length - 1) return "#000";
+                return values[i + 1] >= values[i] ? "#000" : "#f00";
+              }
+            }
+          }
+        ]
       } as EChartsOption;
     }
     if (view.level === "months") {
       const labels = view.year.months.map((m) => monthShortLabel(m.monthKey));
-      const data = view.year.months.map((m) => m.totals[metric]);
+      const values = view.year.months.map((m) => m.totals[metric]);
       return {
         title: { text: `${meta.label} — ${view.year.yearKey}` },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: meta.label, type: meta.type, data, smooth: true, universalTransition: true }]
+        series: [
+          {
+            name: meta.label,
+            type: "line",
+            data: values,
+            smooth: true,
+            universalTransition: true,
+            showSymbol: false,
+            lineStyle: {
+              color: (p: { dataIndex: number }) => {
+                const i = p.dataIndex;
+                if (i >= values.length - 1) return "#000";
+                return values[i + 1] >= values[i] ? "#000" : "#f00";
+              }
+            }
+          }
+        ]
       } as EChartsOption;
     }
     if (view.level === "weeks") {
       const labels = view.month.weeks.map((w) => w.week);
-      const data = view.month.weeks.map((w) => w.totals[metric]);
+      const values = view.month.weeks.map((w) => w.totals[metric]);
       return {
         title: { text: `${meta.label} — ${view.month.month}` },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: meta.label, type: meta.type, data, smooth: true, universalTransition: true }]
+        series: [
+          {
+            name: meta.label,
+            type: "line",
+            data: values,
+            smooth: true,
+            universalTransition: true,
+            showSymbol: false,
+            lineStyle: {
+              color: (p: { dataIndex: number }) => {
+                const i = p.dataIndex;
+                if (i >= values.length - 1) return "#000";
+                return values[i + 1] >= values[i] ? "#000" : "#f00";
+              }
+            }
+          }
+        ]
       } as EChartsOption;
     }
     // days
     const week = view.month.weeks[view.weekIdx];
     const labels = week.metrics.map((d) => d.day);
-    const data = week.metrics.map((d) => d[metric]);
+    const values = week.metrics.map((d) => d[metric]);
     return {
       title: { text: `${meta.label} — ${view.month.month} / ${week.week}` },
       tooltip: { trigger: "axis" },
       xAxis: { type: "category", data: labels },
       yAxis: { type: "value" },
-      series: [{ name: meta.label, type: meta.type, data, smooth: true, universalTransition: true }]
+      series: [
+        {
+          name: meta.label,
+          type: "line",
+          data: values,
+          smooth: true,
+          universalTransition: true,
+          showSymbol: false,
+          lineStyle: {
+            color: (p: { dataIndex: number }) => {
+              const i = p.dataIndex;
+              if (i >= values.length - 1) return "#000";
+              return values[i + 1] >= values[i] ? "#000" : "#f00";
+            }
+          }
+        }
+      ]
     } as EChartsOption;
-  }, [view, metric, meta.label, meta.type]);
+  }, [view, metric, meta.label]);
 
   const onClick = (params: { dataIndex: number }) => {
     if (view.level === "years") {

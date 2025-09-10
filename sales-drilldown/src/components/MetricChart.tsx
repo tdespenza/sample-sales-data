@@ -3,13 +3,13 @@
 import dynamic from "next/dynamic";
 import * as echarts from "echarts/core";
 import type { EChartsOption } from "echarts";
-import { LineChart, BarChart } from "echarts/charts";
+import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { DayMetric, MonthData, SALES } from "@/data/sales";
 import React, { useMemo } from "react";
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 export type ViewState =
@@ -19,11 +19,11 @@ export type ViewState =
 
 type Metric = keyof Omit<DayMetric, "day" | "dateISO">;
 
-const METRIC_META: Record<Metric, { label: string; type: "bar" | "line" }> = {
-  signups: { label: "Sign-ups", type: "bar" },
-  cancellations: { label: "Cancellations", type: "bar" },
-  revenue: { label: "Revenue", type: "line" },
-  upsells: { label: "Upsells", type: "line" }
+const METRIC_META: Record<Metric, { label: string }> = {
+  signups: { label: "Sign-ups" },
+  cancellations: { label: "Cancellations" },
+  revenue: { label: "Revenue" },
+  upsells: { label: "Upsells" }
 };
 
 export default function MetricChart({
@@ -40,13 +40,29 @@ export default function MetricChart({
   const option = useMemo(() => {
     if (view.level === "months") {
       const labels = SALES.map((m) => m.month);
-      const data = SALES.map((m) => m.totals[metric]);
+      const values = SALES.map((m) => m.totals[metric]);
       return {
         title: { text: meta.label },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: meta.label, type: meta.type, data, smooth: true, universalTransition: true }]
+        series: [
+          {
+            name: meta.label,
+            type: "line",
+            data: values,
+            smooth: true,
+            universalTransition: true,
+            showSymbol: false,
+            lineStyle: {
+              color: (p: { dataIndex: number }) => {
+                const i = p.dataIndex;
+                if (i >= values.length - 1) return "#000";
+                return values[i + 1] >= values[i] ? "#000" : "#f00";
+              }
+            }
+          }
+        ]
       } as EChartsOption;
     }
 
@@ -59,7 +75,23 @@ export default function MetricChart({
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: meta.label, type: meta.type, data: totals, smooth: true, universalTransition: true }]
+        series: [
+          {
+            name: meta.label,
+            type: "line",
+            data: totals,
+            smooth: true,
+            universalTransition: true,
+            showSymbol: false,
+            lineStyle: {
+              color: (p: { dataIndex: number }) => {
+                const i = p.dataIndex;
+                if (i >= totals.length - 1) return "#000";
+                return totals[i + 1] >= totals[i] ? "#000" : "#f00";
+              }
+            }
+          }
+        ]
       } as EChartsOption;
     }
 
@@ -73,9 +105,25 @@ export default function MetricChart({
       tooltip: { trigger: "axis" },
       xAxis: { type: "category", data: labels },
       yAxis: { type: "value" },
-      series: [{ name: meta.label, type: meta.type, data: vals, smooth: true, universalTransition: true }]
+      series: [
+        {
+          name: meta.label,
+          type: "line",
+          data: vals,
+          smooth: true,
+          universalTransition: true,
+          showSymbol: false,
+          lineStyle: {
+            color: (p: { dataIndex: number }) => {
+              const i = p.dataIndex;
+              if (i >= vals.length - 1) return "#000";
+              return vals[i + 1] >= vals[i] ? "#000" : "#f00";
+            }
+          }
+        }
+      ]
     } as EChartsOption;
-  }, [view, metric, meta.label, meta.type]);
+  }, [view, metric, meta.label]);
 
   return (
     <ReactECharts

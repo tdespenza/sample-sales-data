@@ -14,26 +14,26 @@ export type MetricMeta = {
   key: MetricKey;
   label: string;
   unit?: string;
-  type: "bar" | "line";
+  type: "line";
   dayFormula: (d: Totals, ctx: { dau: number; cacBase: number }) => number;
   aggregate: "sum" | "avg" | "rate";
   decimals?: number;
 };
 
 export const METRICS: MetricMeta[] = [
-  { key: "signups", label: "Sign-ups", type: "bar", dayFormula: d => d.signups, aggregate: "sum" },
-  { key: "cancellations", label: "Cancellations", type: "bar", dayFormula: d => d.cancellations, aggregate: "sum" },
+  { key: "signups", label: "Sign-ups", type: "line", dayFormula: d => d.signups, aggregate: "sum" },
+  { key: "cancellations", label: "Cancellations", type: "line", dayFormula: d => d.cancellations, aggregate: "sum" },
   { key: "revenue", label: "Revenue", unit: "$", type: "line", dayFormula: d => d.revenue, aggregate: "sum" },
   { key: "upsells", label: "Upsells", type: "line", dayFormula: d => d.upsells, aggregate: "sum" },
   { key: "mrr", label: "MRR", unit: "$", type: "line", dayFormula: d => d.revenue * 0.25, aggregate: "sum" },
   { key: "arr", label: "ARR", unit: "$", type: "line", dayFormula: d => d.revenue * 0.25 * 12 / 30, aggregate: "sum" },
   { key: "arpu", label: "ARPU", unit: "$", type: "line", dayFormula: d => d.revenue / Math.max(1, d.signups - d.cancellations), aggregate: "avg", decimals: 2 },
   { key: "ltv", label: "LTV", unit: "$", type: "line", dayFormula: d => (d.revenue / Math.max(1, d.signups)) * 10, aggregate: "avg", decimals: 0 },
-  { key: "trialStarts", label: "Trial Starts", type: "bar", dayFormula: d => Math.round(d.signups * 0.4), aggregate: "sum" },
+  { key: "trialStarts", label: "Trial Starts", type: "line", dayFormula: d => Math.round(d.signups * 0.4), aggregate: "sum" },
   { key: "trialToPaidRate", label: "Trial→Paid", unit: "%", type: "line", dayFormula: d => (d.signups ? (d.upsells + d.revenue * 0.01) / d.signups : 0) * 100, aggregate: "avg", decimals: 1 },
-  { key: "refunds", label: "Refunds", unit: "$", type: "bar", dayFormula: d => Math.round(d.revenue * 0.03), aggregate: "sum" },
+  { key: "refunds", label: "Refunds", unit: "$", type: "line", dayFormula: d => Math.round(d.revenue * 0.03), aggregate: "sum" },
   { key: "refundRate", label: "Refund Rate", unit: "%", type: "line", dayFormula: d => (d.revenue ? (d.revenue * 0.03) / d.revenue : 0) * 100, aggregate: "avg", decimals: 2 },
-  { key: "churnCount", label: "Churned Users", type: "bar", dayFormula: d => Math.max(0, d.cancellations), aggregate: "sum" },
+  { key: "churnCount", label: "Churned Users", type: "line", dayFormula: d => Math.max(0, d.cancellations), aggregate: "sum" },
   { key: "churnRate", label: "Churn Rate", unit: "%", type: "line", dayFormula: d => (d.signups ? d.cancellations / d.signups : 0) * 100, aggregate: "avg", decimals: 2 },
   { key: "expansionMRR", label: "Expansion MRR", unit: "$", type: "line", dayFormula: d => Math.round(d.upsells * 3), aggregate: "sum" },
   { key: "contractionMRR", label: "Contraction MRR", unit: "$", type: "line", dayFormula: d => -Math.round(d.cancellations * 2), aggregate: "sum" },

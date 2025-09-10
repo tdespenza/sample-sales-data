@@ -2,10 +2,10 @@
 
 import dynamic from "next/dynamic";
 import * as echarts from "echarts/core";
-import { LineChart, BarChart } from "echarts/charts";
+import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   SALES,
   Totals,
@@ -22,7 +22,7 @@ import {
 } from "@/data/sales";
 import { METRICS, MetricKey, MetricMeta } from "@/data/metrics";
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 type View =
@@ -49,16 +49,38 @@ function aggregate(meta: MetricMeta, values: number[]): number {
 export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
   const meta = METRICS.find(m=>m.key===metric)!;
   const [view, setView] = useState<View>({ level: "years", years: groupByYear(SALES) });
-  const calcDay = (t: Totals) => meta.dayFormula(t, dayCtx(t));
+  const calcDay = useCallback((t: Totals) => meta.dayFormula(t, dayCtx(t)), [meta]);
 
   const option = useMemo(() => {
+    const lineColor = (vals: number[]) => (p: { dataIndex: number }) => {
+      const i = p.dataIndex;
+      if (i >= vals.length - 1) return "#000";
+      return vals[i + 1] >= vals[i] ? "#000" : "#f00";
+    };
+
     if (view.level === "years") {
       const labels = view.years.map(y=>y.yearKey);
       const data = view.years.map(y=>{
         const days = y.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      return { title:{text: meta.label}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: meta.label},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          universalTransition:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     if (view.level === "quarters") {
       const labels = view.quarters.map(q=> q.quarterKey.split('-')[1]);
@@ -66,7 +88,23 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const days = q.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      return { title:{text: `${meta.label} — ${view.year.yearKey}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: `${meta.label} — ${view.year.yearKey}`},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          universalTransition:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     if (view.level === "months") {
       const labels = view.quarter.months.map(m=> monthShortLabel(m.monthKey));
@@ -74,7 +112,23 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const days = m.weeks.flatMap(w=> w.metrics);
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      return { title:{text: `${meta.label} — ${view.quarter.quarterKey}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: `${meta.label} — ${view.quarter.quarterKey}`},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          universalTransition:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     if (view.level === "weeks") {
       const labels = view.month.weeks.map(w=> w.week);
@@ -82,24 +136,87 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const vals = w.metrics.map(d=>calcDay(d));
         return Number(aggregate(meta, vals).toFixed(meta.decimals ?? 0));
       });
-      return { title:{text: `${meta.label} — ${view.month.month}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: `${meta.label} — ${view.month.month}`},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          universalTransition:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     if (view.level === "days") {
       const days = daysOfMonth(view.month);
       const labels = days.map(d=> d.dateISO.slice(8,10));
       const data = days.map(d=> Number(calcDay(d.totals).toFixed(meta.decimals ?? 0)));
-      return { title:{text: `${meta.label} — ${view.month.month}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, dataZoom:[{type:"inside"},{type:"slider"}], series:[{ name: meta.label, type: meta.type, data, smooth:true, universalTransition:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: `${meta.label} — ${view.month.month}`},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        dataZoom:[{type:"inside"},{type:"slider"}],
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          universalTransition:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     if (view.level === "hours") {
       const hours = synthesizeHours(view.dayISO, metric, view.dayTotal);
       const labels = hours.map(h=> String(h.hour));
       const data = hours.map(h=> h.value);
-      return { title:{text: `${meta.label} — ${view.dayISO}`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true }] } as echarts.EChartsCoreOption;
+      return {
+        title:{text: `${meta.label} — ${view.dayISO}`},
+        tooltip:{trigger:"axis"},
+        xAxis:{type:"category",data:labels},
+        yAxis:{type:"value"},
+        series:[{
+          name: meta.label,
+          type: "line",
+          data,
+          smooth:true,
+          showSymbol:false,
+          lineStyle:{
+            color: lineColor(data)
+          }
+        }]
+      } as echarts.EChartsCoreOption;
     }
     const minutes = synthesizeMinutes(view.dayISO, view.hour, metric, view.hourTotal);
     const labels = minutes.map(m=> String(m.minute));
     const data = minutes.map(m=> m.value);
-    return { title:{text: `${meta.label} — ${view.dayISO} ${String(view.hour).padStart(2,'0')}:00`}, tooltip:{trigger:"axis"}, xAxis:{type:"category",data:labels}, yAxis:{type:"value"}, series:[{ name: meta.label, type: meta.type, data, smooth:true }] } as echarts.EChartsCoreOption;
+    return {
+      title:{text: `${meta.label} — ${view.dayISO} ${String(view.hour).padStart(2,'0')}:00`},
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:labels},
+      yAxis:{type:"value"},
+      series:[{
+        name: meta.label,
+        type: "line",
+        data,
+        smooth:true,
+        showSymbol:false,
+        lineStyle:{
+          color: lineColor(data)
+        }
+      }]
+    } as echarts.EChartsCoreOption;
   }, [view, metric, meta, calcDay]);
 
   const onClick = (params: { dataIndex: number }) => {
