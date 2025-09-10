@@ -8,6 +8,7 @@ import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { SALES, MonthData } from "@/data/sales";
+import { trendColor } from "@/utils/trendColor";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 
@@ -28,11 +29,7 @@ export default function SalesDrilldown() {
       smooth: true,
       showSymbol: false,
       lineStyle: {
-        color: (p: { dataIndex: number }) => {
-          const i = p.dataIndex;
-          if (i >= values.length - 1) return "#000";
-          return values[i + 1] >= values[i] ? "#000" : "#f00";
-        }
+        color: trendColor(values)
       }
     });
 

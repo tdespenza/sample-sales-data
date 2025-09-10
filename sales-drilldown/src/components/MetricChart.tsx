@@ -8,6 +8,7 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from
 import { CanvasRenderer } from "echarts/renderers";
 import { DayMetric, MonthData, SALES } from "@/data/sales";
 import React, { useMemo } from "react";
+import { trendColor } from "@/utils/trendColor";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -55,11 +56,7 @@ export default function MetricChart({
             universalTransition: true,
             showSymbol: false,
             lineStyle: {
-              color: (p: { dataIndex: number }) => {
-                const i = p.dataIndex;
-                if (i >= values.length - 1) return "#000";
-                return values[i + 1] >= values[i] ? "#000" : "#f00";
-              }
+              color: trendColor(values)
             }
           }
         ]
@@ -84,11 +81,7 @@ export default function MetricChart({
             universalTransition: true,
             showSymbol: false,
             lineStyle: {
-              color: (p: { dataIndex: number }) => {
-                const i = p.dataIndex;
-                if (i >= totals.length - 1) return "#000";
-                return totals[i + 1] >= totals[i] ? "#000" : "#f00";
-              }
+              color: trendColor(totals)
             }
           }
         ]
@@ -114,11 +107,7 @@ export default function MetricChart({
           universalTransition: true,
           showSymbol: false,
           lineStyle: {
-            color: (p: { dataIndex: number }) => {
-              const i = p.dataIndex;
-              if (i >= vals.length - 1) return "#000";
-              return vals[i + 1] >= vals[i] ? "#000" : "#f00";
-            }
+            color: trendColor(vals)
           }
         }
       ]

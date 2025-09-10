@@ -8,6 +8,7 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from
 import { CanvasRenderer } from "echarts/renderers";
 import React, { useMemo, useState } from "react";
 import { SALES, MonthData, YearBucket, groupByYear, monthShortLabel, Totals } from "@/data/sales";
+import { trendColor } from "@/utils/trendColor";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -49,11 +50,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
             universalTransition: true,
             showSymbol: false,
             lineStyle: {
-              color: (p: { dataIndex: number }) => {
-                const i = p.dataIndex;
-                if (i >= values.length - 1) return "#000";
-                return values[i + 1] >= values[i] ? "#000" : "#f00";
-              }
+              color: trendColor(values)
             }
           }
         ]
@@ -76,11 +73,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
             universalTransition: true,
             showSymbol: false,
             lineStyle: {
-              color: (p: { dataIndex: number }) => {
-                const i = p.dataIndex;
-                if (i >= values.length - 1) return "#000";
-                return values[i + 1] >= values[i] ? "#000" : "#f00";
-              }
+              color: trendColor(values)
             }
           }
         ]
@@ -103,11 +96,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
             universalTransition: true,
             showSymbol: false,
             lineStyle: {
-              color: (p: { dataIndex: number }) => {
-                const i = p.dataIndex;
-                if (i >= values.length - 1) return "#000";
-                return values[i + 1] >= values[i] ? "#000" : "#f00";
-              }
+              color: trendColor(values)
             }
           }
         ]
@@ -131,11 +120,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
           universalTransition: true,
           showSymbol: false,
           lineStyle: {
-            color: (p: { dataIndex: number }) => {
-              const i = p.dataIndex;
-              if (i >= values.length - 1) return "#000";
-              return values[i + 1] >= values[i] ? "#000" : "#f00";
-            }
+            color: trendColor(values)
           }
         }
       ]
