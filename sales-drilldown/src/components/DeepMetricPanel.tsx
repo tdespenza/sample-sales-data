@@ -21,6 +21,7 @@ import {
   findMonth
 } from "@/data/sales";
 import { METRICS, MetricKey, MetricMeta } from "@/data/metrics";
+import { trendColor } from "@/utils/trendColor";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, CanvasRenderer]);
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -52,12 +53,6 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
   const calcDay = useCallback((t: Totals) => meta.dayFormula(t, dayCtx(t)), [meta]);
 
   const option = useMemo(() => {
-    const lineColor = (vals: number[]) => (p: { dataIndex: number }) => {
-      const i = p.dataIndex;
-      if (i >= vals.length - 1) return "#000";
-      return vals[i + 1] >= vals[i] ? "#000" : "#f00";
-    };
-
     if (view.level === "years") {
       const labels = view.years.map(y=>y.yearKey);
       const data = view.years.map(y=>{
@@ -77,7 +72,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           universalTransition:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -101,7 +96,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           universalTransition:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -125,7 +120,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           universalTransition:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -149,7 +144,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           universalTransition:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -172,7 +167,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           universalTransition:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -193,7 +188,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
           smooth:true,
           showSymbol:false,
           lineStyle:{
-            color: lineColor(data)
+            color: trendColor(data)
           }
         }]
       } as echarts.EChartsCoreOption;
@@ -213,7 +208,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         smooth:true,
         showSymbol:false,
         lineStyle:{
-          color: lineColor(data)
+          color: trendColor(data)
         }
       }]
     } as echarts.EChartsCoreOption;
