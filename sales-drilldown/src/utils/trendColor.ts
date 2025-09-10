@@ -1,7 +1,8 @@
 export function trendColor(values: number[]) {
-  return (p: { dataIndex: number }) => {
-    const i = p.dataIndex;
-    if (i <= 0) return "#000";
-    return values[i] >= values[i - 1] ? "#000" : "#f00";
-  };
+  return values.map((v, i) => ({
+    value: v,
+    lineStyle: {
+      color: i < values.length - 1 && values[i + 1] < v ? "#f00" : "#000"
+    }
+  }));
 }

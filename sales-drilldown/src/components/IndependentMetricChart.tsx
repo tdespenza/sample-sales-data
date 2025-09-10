@@ -36,6 +36,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
     if (view.level === "years") {
       const labels = view.years.map((y) => y.yearKey);
       const values = view.years.map((y) => y.totals[metric]);
+      const data = trendColor(values);
       return {
         title: { text: meta.label },
         tooltip: { trigger: "axis" },
@@ -45,13 +46,10 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
           {
             name: meta.label,
             type: "line",
-            data: values,
+            data,
             smooth: true,
             universalTransition: true,
-            showSymbol: false,
-            lineStyle: {
-              color: trendColor(values)
-            }
+            showSymbol: false
           }
         ]
       } as EChartsOption;
@@ -59,6 +57,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
     if (view.level === "months") {
       const labels = view.year.months.map((m) => monthShortLabel(m.monthKey));
       const values = view.year.months.map((m) => m.totals[metric]);
+      const data = trendColor(values);
       return {
         title: { text: `${meta.label} — ${view.year.yearKey}` },
         tooltip: { trigger: "axis" },
@@ -68,13 +67,10 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
           {
             name: meta.label,
             type: "line",
-            data: values,
+            data,
             smooth: true,
             universalTransition: true,
-            showSymbol: false,
-            lineStyle: {
-              color: trendColor(values)
-            }
+            showSymbol: false
           }
         ]
       } as EChartsOption;
@@ -82,6 +78,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
     if (view.level === "weeks") {
       const labels = view.month.weeks.map((w) => w.week);
       const values = view.month.weeks.map((w) => w.totals[metric]);
+      const data = trendColor(values);
       return {
         title: { text: `${meta.label} — ${view.month.month}` },
         tooltip: { trigger: "axis" },
@@ -91,13 +88,10 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
           {
             name: meta.label,
             type: "line",
-            data: values,
+            data,
             smooth: true,
             universalTransition: true,
-            showSymbol: false,
-            lineStyle: {
-              color: trendColor(values)
-            }
+            showSymbol: false
           }
         ]
       } as EChartsOption;
@@ -106,6 +100,7 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
     const week = view.month.weeks[view.weekIdx];
     const labels = week.metrics.map((d) => d.day);
     const values = week.metrics.map((d) => d[metric]);
+    const data = trendColor(values);
     return {
       title: { text: `${meta.label} — ${view.month.month} / ${week.week}` },
       tooltip: { trigger: "axis" },
@@ -115,13 +110,10 @@ export default function IndependentMetricChart({ metric }: { metric: Metric }) {
         {
           name: meta.label,
           type: "line",
-          data: values,
+          data,
           smooth: true,
           universalTransition: true,
-          showSymbol: false,
-          lineStyle: {
-            color: trendColor(values)
-          }
+          showSymbol: false
         }
       ]
     } as EChartsOption;
