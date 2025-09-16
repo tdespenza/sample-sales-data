@@ -1,20 +1,33 @@
+import type { CallbackDataParams } from "echarts/types/dist/shared";
+import type { LineSeriesOption } from "echarts/charts";
+
 const UP_COLOR = "#000";
 const DOWN_COLOR = "#c21";
 
+type TrendSeriesConfig = Pick<LineSeriesOption, "data" | "lineStyle" | "itemStyle" | "emphasis">;
+
 /**
- * Build ECharts-friendly data items that color each line segment based on the
- * movement from the previous point. Segments with a non-negative change use
- * {@link UP_COLOR}, while negative deltas use {@link DOWN_COLOR}.
+ * Build the reusable series configuration that colors each line segment based on
+ * how the value changed from the previous point. Segments with a non-negative
+ * change use {@link UP_COLOR}, while negative deltas use {@link DOWN_COLOR}.
  */
-export function trendColor(values: number[]) {
-  return values.map((value, index) => {
-    const color = getSegmentColor(values, index);
-    return {
-      value,
-      lineStyle: { color },
-      itemStyle: { color }
-    };
-  });
+export function trendColor(values: number[]): TrendSeriesConfig {
+  const safeValues = values.slice();
+
+  const colorForParams = (params: CallbackDataParams) => {
+    const index = typeof params.dataIndex === "number" ? params.dataIndex : 0;
+    return getSegmentColor(safeValues, clampIndex(index, safeValues.length));
+  };
+
+  return {
+    data: safeValues,
+    lineStyle: { color: colorForParams },
+    itemStyle: { color: colorForParams },
+    emphasis: {
+      lineStyle: { color: colorForParams },
+      itemStyle: { color: colorForParams }
+    }
+  };
 }
 
 function getSegmentColor(values: number[], index: number) {
@@ -25,4 +38,10 @@ function getSegmentColor(values: number[], index: number) {
   }
   const prev = values[index - 1];
   return values[index] < prev ? DOWN_COLOR : UP_COLOR;
+}
+
+function clampIndex(index: number, length: number) {
+  if (index < 0) return 0;
+  if (index >= length) return length - 1;
+  return index;
 }

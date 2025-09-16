@@ -42,7 +42,7 @@ export default function MetricChart({
     if (view.level === "months") {
       const labels = SALES.map((m) => m.month);
       const values = SALES.map((m) => m.totals[metric]);
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title: { text: meta.label },
         tooltip: { trigger: "axis" },
@@ -52,10 +52,10 @@ export default function MetricChart({
           {
             name: meta.label,
             type: "line",
-            data,
             smooth: true,
             universalTransition: true,
-            showSymbol: false
+            showSymbol: false,
+            ...trend
           }
         ]
       } as EChartsOption;
@@ -65,7 +65,7 @@ export default function MetricChart({
       const { month } = view;
       const labels = month.weeks.map((w) => w.week);
       const totals = month.weeks.map((w) => w.totals[metric]);
-      const data = trendColor(totals);
+      const trend = trendColor(totals);
       return {
         title: { text: `${meta.label} — ${month.month}` },
         tooltip: { trigger: "axis" },
@@ -75,10 +75,10 @@ export default function MetricChart({
           {
             name: meta.label,
             type: "line",
-            data,
             smooth: true,
             universalTransition: true,
-            showSymbol: false
+            showSymbol: false,
+            ...trend
           }
         ]
       } as EChartsOption;
@@ -89,7 +89,7 @@ export default function MetricChart({
     const week = month.weeks[weekIdx];
     const labels = week.metrics.map((d) => d.day);
     const vals = week.metrics.map((d) => d[metric]);
-    const data = trendColor(vals);
+    const trend = trendColor(vals);
     return {
       title: { text: `${meta.label} — ${month.month} / ${week.week}` },
       tooltip: { trigger: "axis" },
@@ -99,10 +99,10 @@ export default function MetricChart({
         {
           name: meta.label,
           type: "line",
-          data,
           smooth: true,
           universalTransition: true,
-          showSymbol: false
+          showSymbol: false,
+          ...trend
         }
       ]
     } as EChartsOption;
