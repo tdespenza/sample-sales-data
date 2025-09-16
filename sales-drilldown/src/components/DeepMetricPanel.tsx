@@ -59,7 +59,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const days = y.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: meta.label},
         tooltip:{trigger:"axis"},
@@ -68,10 +68,10 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
           universalTransition:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
@@ -81,7 +81,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const days = q.months.flatMap(m=> m.weeks.flatMap(w=> w.metrics));
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: `${meta.label} — ${view.year.yearKey}`},
         tooltip:{trigger:"axis"},
@@ -90,10 +90,10 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
           universalTransition:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
@@ -103,7 +103,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const days = m.weeks.flatMap(w=> w.metrics);
         return Number(aggregate(meta, days.map(d=>calcDay(d))).toFixed(meta.decimals ?? 0));
       });
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: `${meta.label} — ${view.quarter.quarterKey}`},
         tooltip:{trigger:"axis"},
@@ -112,10 +112,10 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
           universalTransition:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
@@ -125,7 +125,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         const vals = w.metrics.map(d=>calcDay(d));
         return Number(aggregate(meta, vals).toFixed(meta.decimals ?? 0));
       });
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: `${meta.label} — ${view.month.month}`},
         tooltip:{trigger:"axis"},
@@ -134,10 +134,10 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
           universalTransition:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
@@ -145,7 +145,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
       const days = daysOfMonth(view.month);
       const labels = days.map(d=> d.dateISO.slice(8,10));
       const values = days.map(d=> Number(calcDay(d.totals).toFixed(meta.decimals ?? 0)));
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: `${meta.label} — ${view.month.month}`},
         tooltip:{trigger:"axis"},
@@ -155,10 +155,10 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
           universalTransition:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
@@ -166,7 +166,7 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
       const hours = synthesizeHours(view.dayISO, metric, view.dayTotal);
       const labels = hours.map(h=> String(h.hour));
       const values = hours.map(h=> h.value);
-      const data = trendColor(values);
+      const trend = trendColor(values);
       return {
         title:{text: `${meta.label} — ${view.dayISO}`},
         tooltip:{trigger:"axis"},
@@ -175,16 +175,16 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
         series:[{
           name: meta.label,
           type: "line",
-          data,
           smooth:true,
-          showSymbol:false
+          showSymbol:false,
+          ...trend
         }]
       } as echarts.EChartsCoreOption;
     }
     const minutes = synthesizeMinutes(view.dayISO, view.hour, metric, view.hourTotal);
     const labels = minutes.map(m=> String(m.minute));
     const values = minutes.map(m=> m.value);
-    const data = trendColor(values);
+    const trend = trendColor(values);
     return {
       title:{text: `${meta.label} — ${view.dayISO} ${String(view.hour).padStart(2,'0')}:00`},
       tooltip:{trigger:"axis"},
@@ -193,9 +193,9 @@ export default function DeepMetricPanel({ metric }: { metric: MetricKey }) {
       series:[{
         name: meta.label,
         type: "line",
-        data,
         smooth:true,
-        showSymbol:false
+        showSymbol:false,
+        ...trend
       }]
     } as echarts.EChartsCoreOption;
   }, [view, metric, meta, calcDay]);
