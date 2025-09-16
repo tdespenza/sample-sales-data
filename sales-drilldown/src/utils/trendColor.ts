@@ -1,10 +1,20 @@
-import type { CallbackDataParams } from "echarts/types/dist/shared";
+import type { CallbackDataParams, ZRColor } from "echarts/types/dist/shared";
 import type { LineSeriesOption } from "echarts/charts";
 
 const UP_COLOR = "#000";
 const DOWN_COLOR = "#c21";
 
-type TrendSeriesConfig = Pick<LineSeriesOption, "data" | "lineStyle" | "itemStyle" | "emphasis">;
+type LineColorGetter = (params: CallbackDataParams) => ZRColor;
+
+type TrendSeriesConfig = {
+  data: LineSeriesOption["data"];
+  lineStyle: { color: LineColorGetter };
+  itemStyle: NonNullable<LineSeriesOption["itemStyle"]>;
+  emphasis: {
+    lineStyle: { color: LineColorGetter };
+    itemStyle: NonNullable<LineSeriesOption["itemStyle"]>;
+  };
+};
 
 /**
  * Build the reusable series configuration that colors each line segment based on
@@ -14,7 +24,7 @@ type TrendSeriesConfig = Pick<LineSeriesOption, "data" | "lineStyle" | "itemStyl
 export function trendColor(values: number[]): TrendSeriesConfig {
   const safeValues = values.slice();
 
-  const colorForParams = (params: CallbackDataParams) => {
+  const colorForParams: LineColorGetter = (params) => {
     const index = typeof params.dataIndex === "number" ? params.dataIndex : 0;
     return getSegmentColor(safeValues, clampIndex(index, safeValues.length));
   };
